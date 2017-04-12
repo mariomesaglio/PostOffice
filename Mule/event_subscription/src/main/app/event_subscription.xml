@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:redis="http://www.mulesoft.org/schema/mule/redis" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/apikit" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:spring="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/apikit http://www.mulesoft.org/schema/mule/apikit/current/mule-apikit.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+http://www.mulesoft.org/schema/mule/redis http://www.mulesoft.org/schema/mule/redis/current/mule-redis.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
+http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <http:listener-config name="event_subscription_apidef-httpListenerConfig" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
+    <apikit:config name="event_subscription_apidef-config" raml="event_subscription_apidef.raml" consoleEnabled="false" doc:name="Router" keepRamlBaseUri="false">
+        <apikit:flow-mapping resource="/event_subscription" action="get" flow-ref="get:/event_subscription:event_subscription_apidef-config"/>
+        <apikit:flow-mapping resource="/event_subscription" action="put" content-type="application/json" flow-ref="put:/event_subscription:application/json:event_subscription_apidef-config"/>
+        <apikit:flow-mapping resource="/event_subscription" action="post" content-type="application/json" flow-ref="post:/event_subscription:application/json:event_subscription_apidef-config"/>
+    </apikit:config>
+    <redis:config name="Sub_Redis_Config" host="${redis.host}" port="${redis.port}" doc:name="Redis: Configuration"/>
+    <flow name="event_subscription_apidef-main">
+        <http:listener config-ref="event_subscription_apidef-httpListenerConfig" path="/*" doc:name="HTTP"/>
+        <apikit:router config-ref="event_subscription_apidef-config" doc:name="APIkit Router"/>
+        <exception-strategy ref="event_subscription_apidef-apiKitGlobalExceptionMapping" doc:name="Reference Exception Strategy"/>
+    </flow>
+    <flow name="event_subscription_apidef-console">
+        <http:listener config-ref="event_subscription_apidef-httpListenerConfig" path="/console/*" doc:name="HTTP"/>
+        <apikit:console config-ref="event_subscription_apidef-config" doc:name="APIkit Console"/>
+    </flow>
+    <flow name="put:/event_subscription:application/json:event_subscription_apidef-config">
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Copy_of_Set Payload"/>
+    </flow>
+    <flow name="get:/event_subscription:event_subscription_apidef-config">
+        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+    </flow>
+    <flow name="post:/event_subscription:application/json:event_subscription_apidef-config">
+        <json:json-to-object-transformer  doc:name="JSON to Object" returnClass="com.globallogic.frw.po.event.subscription.SubscriptionRequest"/>
+        <set-variable variableName="eventSubscription" value="#[message.payload]" doc:name="Save Message"/>
+        <redis:exists config-ref="Sub_Redis_Config" key="#[eventSubscription.getSubKey()]" doc:name="Redis"/>
+        <choice doc:name="Choice">
+            <when expression="#[message.payload==0]">
+                <redis:set config-ref="Sub_Redis_Config" key="#[eventSubscription.getSubKey()]" value="#[eventSubscription.getSubValue()]" doc:name="Redis"/>
+                <set-payload value="#[&quot;VALID - SUBSCRIBED&quot;]" doc:name="Status - VALID"/>
+            </when>
+            <otherwise>
+                <set-property propertyName="http.status" value="#['409']" doc:name="Property"/>
+                <set-payload value="#[&quot;INVALID - ALREADY EXISTS&quot;]" doc:name="Status - INVALID"/>
+            </otherwise>
+        </choice>
+        <set-payload value="#[new com.globallogic.frw.po.event.subscription.SubscriptionStatus(message.payload)]" doc:name="Set Payload"/>
+    </flow>
+    <apikit:mapping-exception-strategy name="event_subscription_apidef-apiKitGlobalExceptionMapping">
+        <apikit:mapping statusCode="404">
+            <apikit:exception value="org.mule.module.apikit.exception.NotFoundException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Resource not found&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="405">
+            <apikit:exception value="org.mule.module.apikit.exception.MethodNotAllowedException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Method not allowed&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="415">
+            <apikit:exception value="org.mule.module.apikit.exception.UnsupportedMediaTypeException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Unsupported media type&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="406">
+            <apikit:exception value="org.mule.module.apikit.exception.NotAcceptableException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Not acceptable&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+        <apikit:mapping statusCode="400">
+            <apikit:exception value="org.mule.module.apikit.exception.BadRequestException" />
+            <set-property propertyName="Content-Type" value="application/json" doc:name="Property"/>
+            <set-payload value="{ &quot;message&quot;: &quot;Bad request&quot; }" doc:name="Set Payload"/>
+        </apikit:mapping>
+    </apikit:mapping-exception-strategy>
+</mule>
