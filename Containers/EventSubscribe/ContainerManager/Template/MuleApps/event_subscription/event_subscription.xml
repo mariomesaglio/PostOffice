@@ -8,7 +8,7 @@ http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mul
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
 http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
     <http:listener-config name="event_subscription_apidef-httpListenerConfig" host="0.0.0.0" port="8081" doc:name="HTTP Listener Configuration"/>
-    <apikit:config name="event_subscription_apidef-config" raml="event_subscription_apidef.raml" consoleEnabled="false" doc:name="Router" keepRamlBaseUri="false">
+    <apikit:config name="event_subscription_apidef-config" raml="event_subscription_apidef.raml" consoleEnabled="false" doc:name="Router">
         <apikit:flow-mapping resource="/event_subscription" action="get" flow-ref="get:/event_subscription:event_subscription_apidef-config"/>
         <apikit:flow-mapping resource="/event_subscription" action="put" content-type="application/json" flow-ref="put:/event_subscription:application/json:event_subscription_apidef-config"/>
         <apikit:flow-mapping resource="/event_subscription" action="post" content-type="application/json" flow-ref="post:/event_subscription:application/json:event_subscription_apidef-config"/>

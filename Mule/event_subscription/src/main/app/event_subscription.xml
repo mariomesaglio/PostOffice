@@ -27,23 +27,15 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
         <set-payload value="#[NullPayload.getInstance()]" doc:name="Copy_of_Set Payload"/>
     </flow>
     <flow name="get:/event_subscription:event_subscription_apidef-config">
-        <set-payload value="#[NullPayload.getInstance()]" doc:name="Set Payload"/>
+        <redis:hash-get-all config-ref="Sub_Redis_Config" key="#[message.inboundProperties.'http.query.params'.event_id]" doc:name="Redis"/>
+        <set-payload value="#[new com.globallogic.frw.po.event.subscription.SubscriptionsDetail(message.payload)]" doc:name="Set Payload"/>
+        <json:object-to-json-transformer doc:name="Object to JSON"/>
     </flow>
     <flow name="post:/event_subscription:application/json:event_subscription_apidef-config">
-        <json:json-to-object-transformer  doc:name="JSON to Object" returnClass="com.globallogic.frw.po.event.subscription.SubscriptionRequest"/>
-        <set-variable variableName="eventSubscription" value="#[message.payload]" doc:name="Save Message"/>
-        <redis:exists config-ref="Sub_Redis_Config" key="#[eventSubscription.getSubKey()]" doc:name="Redis"/>
-        <choice doc:name="Choice">
-            <when expression="#[message.payload==0]">
-                <redis:set config-ref="Sub_Redis_Config" key="#[eventSubscription.getSubKey()]" value="#[eventSubscription.getSubValue()]" doc:name="Redis"/>
-                <set-payload value="#[&quot;VALID - SUBSCRIBED&quot;]" doc:name="Status - VALID"/>
-            </when>
-            <otherwise>
-                <set-property propertyName="http.status" value="#['409']" doc:name="Property"/>
-                <set-payload value="#[&quot;INVALID - ALREADY EXISTS&quot;]" doc:name="Status - INVALID"/>
-            </otherwise>
-        </choice>
-        <set-payload value="#[new com.globallogic.frw.po.event.subscription.SubscriptionStatus(message.payload)]" doc:name="Set Payload"/>
+        <json:json-to-object-transformer  doc:name="JSON to Object" returnClass="com.globallogic.frw.po.event.subscription.Subscription"/>
+        <set-variable variableName="reqMSG" value="#[message.payload]" doc:name="Save Message"/>
+        <redis:hash-set config-ref="Sub_Redis_Config" field="#[reqMSG.getSubID()]" key="#[reqMSG.getEventID()]" value="#[reqMSG.getSubValue()]" doc:name="Redis"/>
+        <set-payload value="#[new com.globallogic.frw.po.event.subscription.SubscriptionStatus(&quot;VALID - SUBSCRIBED&quot;)]" doc:name="Set Payload"/>
     </flow>
     <apikit:mapping-exception-strategy name="event_subscription_apidef-apiKitGlobalExceptionMapping">
         <apikit:mapping statusCode="404">

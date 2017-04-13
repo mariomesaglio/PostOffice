@@ -14,22 +14,14 @@ schemas:
       "description": "A Request for Subscription",
       "type": "object",
       "properties": {
-          "subID": {
-              "description": "The unique identifier for a subscriber",
-              "type": "string"
-          },
           "eventID": {
               "description": "The unique identifier for an event",
-              "type": "string"
-          },
-          "eventLabel": {
-              "description": "The unique label for an instance of an event",
               "type": "string"
           }
       },
       "required": ["subID","eventID","callbackURL","healthURL"]
     }
-  subsriptionRequest: | 
+  subsription: | 
     {
       "$schema": "http://json-schema.org/draft-04/schema#",
       "title": "Subscription",
@@ -42,10 +34,6 @@ schemas:
           },
           "eventID": {
               "description": "The unique identifier for an event",
-              "type": "string"
-          },
-          "eventLabel": {
-              "description": "The unique label for an instance of an event",
               "type": "string"
           },
           "callbackURL": {
@@ -73,20 +61,16 @@ schemas:
       },
       "required": ["status"]
     } 
-  subscriptionDetail: | 
+  subscriptionsDetail: | 
     {
       "$schema": "http://json-schema.org/draft-04/schema#",
       "title": "Subscription Status",
       "description": "Status of a Subscription.",
-      "type": "object",
+      "type": "array",
       "properties": {
-          "subscriptionDetails": {
+          "subscriptions": {
               "description": "Status Code",
-              "schema": "eventSubscription"
-          },
-          "subscriptionStatus": {
-              "description": "Status Code",
-              "schema": "eventSubscription"
+              "schema": "subsription"
           }
       },
       "required": ["subscriptionStatus"]
@@ -114,20 +98,8 @@ schemas:
 /event_subscription:
   get:
     queryParameters:
-      sub_id:
-        description: "The unique identifier for a subscriber"
-        required: true
-        minLength: 1
-        type: string
-        example: "c2c-usad12-d233js-sd23jdn2"
       event_id:
         description: "The unique identifier for an event"
-        required: true
-        minLength: 1
-        type: string
-        example: "MarioMesaglio.34503324"
-      event_label:
-        description: "The unique label for an instance of an event"
         required: true
         minLength: 1
         type: string
@@ -136,7 +108,7 @@ schemas:
       200:
         body:
           application/json:
-            schema: subscriptionDetail
+            schema: subscriptionsDetail
       404:
         body:
           application/json:
@@ -144,7 +116,7 @@ schemas:
   post:
     body:
      application/json:
-      schema: subsriptionRequest
+      schema: subsription
     responses:
       200:
         body:
