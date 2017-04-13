@@ -47,7 +47,7 @@ else
   if [ $action = 'REMOVE' ]; then
 
     cd ../Redis_NonPersistent/ContainerManager
-    $(../Redis_NonPersistent/ContainerManager/ContainerManager.sh REMOVE $redisContainerName)
+    $(./ContainerManager.sh REMOVE $redisContainerName)
 
     cd ../../ContainerManager
     cd ../Containers/$containerName
